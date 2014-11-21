@@ -27,54 +27,69 @@
 
 using namespace std;
 
-int N;
 int Nloc;
-double pi;
+const int N = 1000000;
+double pi = 0;
+pthread_mutex_t writePi, writeConsole;
 
-void* pimontecarlo(void *vargs)
-{
-	int threadID = *((int*)vargs);
+void* pimontecarlo(void *vargs){
+	int threadID = (long)vargs;
+
+	pthread_mutex_lock(&writeConsole);
 	cout << "Hello from thread " << threadID << endl;
-
-	std::default_random_engine generator;
+	pthread_mutex_unlock(&writeConsole);
+	//init
+	double local_pi = 0;
+	std::default_random_engine generator(threadID); //must have a seed
 	std::uniform_real_distribution<double> distribution(-1.0,1.0);
 
+	//calculate
 	for (size_t i = 0; i < Nloc; i++) {
 		double x = distribution(generator);
 		double y = distribution(generator);
 		if (sqrt(x*x + y*y) < 1.0)
-			pi += 4.0 / double(N);
+			local_pi += 4.0 / double(N);
 	}
+
+	//add
+	pthread_mutex_lock(&writePi);
+	pi += local_pi;
+	pthread_mutex_unlock(&writePi);
 
 	return NULL;
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]){
 	if (argc != 2) {
 		cerr << "Usage: ./pimontecarlo <number of threads>" << endl;
 		exit(EXIT_FAILURE);
 	}
 
 	int numThreads = atoi(argv[1]);
-
-	N = 1000000;
 	cout << "Generating " << N << " random values using " << numThreads << " thread(s)." << endl;
-
 	Nloc = N / numThreads;
 
+	pthread_mutex_init(&writePi, NULL);
+	pthread_mutex_init(&writeConsole, NULL);
 	pthread_t *thread = new pthread_t[numThreads];
 
 	// create threads
-	for (long i = 0; i < numThreads; i++)
-		pthread_create(&thread[i], NULL, pimontecarlo, (void*)&i);
+	for (long i = 0; i < numThreads; i++){
+		pthread_create(&thread[i], NULL, pimontecarlo, (void*)i);
+	}
 
-	for (int i = 0; i < numThreads; i++)
+	for (int i = 0; i < numThreads; i++){
 		pthread_join(thread[i], NULL);
+	}
 
+	//get the pi values together
 	cout.precision(12);
 	cout << "Value for pi: " << pi << endl;
-
+	
+	//cleanup
 	delete [] thread;
+	pthread_mutex_destroy(&writePi);
+	pthread_mutex_destroy(&writeConsole);
+	
 	exit(EXIT_SUCCESS);
 }

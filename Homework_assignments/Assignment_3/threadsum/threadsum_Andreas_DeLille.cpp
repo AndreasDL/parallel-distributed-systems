@@ -23,74 +23,90 @@
 #include <cstring> 
 #include <cmath> 
 #include <pthread.h> 
-#include <vector>
 
 using namespace std;
-vector<int> stack;
 
 // ==========================================================================
-// THREAD ROUTINES
+// TIMING ROUTINES
 // ==========================================================================
 
-int bake()
+int N;
+int numThreads;
+double *value;
+double *localSum;
+double prevTime;
+
+void startChrono() 
 {
-        cout << "Baked donut...\n";
-	return 0;
+        prevTime = double(clock()) / CLOCKS_PER_SEC;
 }
 
-void* producer(void *vargs)
+double stopChrono()
 {
-	while (true) {
-		int element = bake();
-
-		// if (stack.size() == 10)
-		//      thread goes to sleep
-
-		stack.push_back(element); // push "created" element onto the stack
-
-		// if (stack.size() == 1)
-		//      wake consumer thread
-	}
-
-	return NULL;
+        double currTime = double(clock()) / CLOCKS_PER_SEC;
+        return currTime - prevTime;
 }
 
-void eat(int donut)
-{
-	cout << "Ate donut...\n";
-}
+// ==========================================================================
+// THREAD ROUTINE
+// ==========================================================================
 
-void* consumer(void *vargs)
-{
-	while (true) {
-                // if (stack.empty())
-		//     thread goes to sleep
+void* threadsum(void *vargs){
+	long threadID = (long)vargs;
 
-		int donut = stack.back(); // get element
-		stack.pop_back(); // remove element
+	int start = threadID * N / numThreads;
+	int stop = (threadID + 1) * N / numThreads;
+	
+	for (size_t i = start; i < stop; i++)
+		localSum[threadID] += value[i];
 
-		// if (stack.size() == 9)
-		//     wake producer thread
-
-		eat(donut);
-	}
 
 	return NULL;
 }
 
 int main(int argc, char* argv[])
 {
-	cout << "Warning: this code runs forever..." << endl;
+	if (argc != 2) {
+		cerr << "Usage: ./threadsum <number of threads>" << endl;
+		exit(EXIT_FAILURE);
+	}
 
-	pthread_t prod, cons;
+	numThreads = atoi(argv[1]);
+	N = 100000000;
+
+	value = new double[N];
+	for (size_t i = 0; i < N; i++)
+		value[i] = i;
+
+	cout << "Summing " << N << " values using " << numThreads << " thread(s)." << endl;
+
+	pthread_t *thread = new pthread_t[numThreads];
+	localSum = new double[numThreads];	
+
+	startChrono();
 
 	// create threads
-	pthread_create(&prod, NULL, producer, NULL);
-	pthread_create(&cons, NULL, consumer, NULL);
+	for (long i = 0; i < numThreads; i++)
+		pthread_create(&thread[i], NULL, threadsum, (void*)i);
 
-	// this point will never be reached ...
-	pthread_join(prod, NULL);
-	pthread_join(cons, NULL);
+	for (int i = 0; i < numThreads; i++)
+		pthread_join(thread[i], NULL);
+
+	// calculate global sum
+	double sum = 0.0;
+	for (int i = 0; i < numThreads; i++)
+		sum += localSum[i];
+
+	cout.precision(12);
+	cout << "Sum = " << sum << endl;
+
+	// start/stopChrono provides CPU time, therefore divide by numThreads
+	// to approximately get the wall clock time
+	cout << "Runtime: " << stopChrono() / numThreads << endl;
+
+	delete [] thread;
+	delete [] localSum;
+	delete [] value;
 
 	exit(EXIT_SUCCESS);
 }

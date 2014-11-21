@@ -51,17 +51,15 @@ double stopChrono()
 // THREAD ROUTINE
 // ==========================================================================
 
-void* threadsum(void *vargs)
-{
+void* threadsum(void *vargs){
 	long threadID = (long)vargs;
 
 	int start = threadID * N / numThreads;
 	int stop = (threadID + 1) * N / numThreads;
-
-	localSum[threadID] = 0.0;
 	
 	for (size_t i = start; i < stop; i++)
 		localSum[threadID] += value[i];
+
 
 	return NULL;
 }

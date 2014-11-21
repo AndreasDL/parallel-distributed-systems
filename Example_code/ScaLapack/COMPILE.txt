@@ -1,0 +1,32 @@
+I've ported the Fortran example from the ScaLapack User's Guide (see online) to C++.
+
+Compile on a Fedora Linux box:
+==============================
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64/openmpi/lib
+mpicxx example.cpp -o example -lscalapack -lmpiblacsCinit -lmpiblacs -llapack -lblas
+
+
+For this, you need to install following packages:
+
+scalapack-openmpi-devel
+lapack-devel
+openmpi-devel
+blas-devel
+blacs-openmpi-devel
+
+On Fedora (as super-user)
+
+yum install scalapack-devel
+
+Compile on Delcatty
+===================
+
+module load ictce
+mpiicpc example.cpp -o example -L$MKLROOT/mkl/lib/intel64/ -lmkl_scalapack_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lmkl_blacs_intelmpi_lp64 -lpthread -lm
+
+
+Run the example (works only for 6 processes)
+============================================
+
+mpirun -np 6 ./example

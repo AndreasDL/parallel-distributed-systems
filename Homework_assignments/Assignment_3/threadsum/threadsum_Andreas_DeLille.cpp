@@ -56,10 +56,13 @@ void* threadsum(void *vargs){
 
 	int start = threadID * N / numThreads;
 	int stop = (threadID + 1) * N / numThreads;
+
+	double lsum = 0.0;
 	
 	for (size_t i = start; i < stop; i++)
-		localSum[threadID] += value[i];
+		lsum += value[i];
 
+	localSum[threadID] = lsum;
 
 	return NULL;
 }

@@ -1,0 +1,20 @@
+sudo ij
+connect 'jdbc:derby://localhost:1527/LabSessionPDS2014b';
+
+show tables;
+
+select * from app.table;
+
+sudo asadmin
+start-domain
+create-jdbc-connection-pool --datasourceclassname org.apache.derby.jdbc.ClientDataSource --restype javax.sql.XADataSource --property portNumber=1527:password=APP:user=APP:serverName=localhost:databaseName=LabSessionPDS2014:connectionAttributes=\;create\\=true derby_net_LabSessionPDS2014_administratorPool
+
+create-jdbc-resource --connectionpoolid derby_net_LabSessionPDS2014_administratorPool jdbc/LabSessionPDS2014b
+
+deploy --createtables=true /users/studX/LabSessionPDS2014.ear 
+
+get-client-stubs --appname LabSessionPDS2014 /users/studX
+
+delay x
+
+appclient -jar /users/studX/LabSessionPDS2014Client.jar 192.168.0.2 group_number delay
